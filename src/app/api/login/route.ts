@@ -6,7 +6,19 @@ import bcrypt from "bcryptjs";
 export async function POST(req: Request)
 {
     // all logic here
-    const body = await req.json();
+    let body;
+
+    try {
+        body = await req.json()
+    }
+    catch {
+        return Response.json(
+            { error: "Invalid or missing JSON body" },
+            { status: 400 }
+        );
+    }
+
+
     const {email, password} = body;
 
     if (!email || !password)
@@ -16,6 +28,8 @@ export async function POST(req: Request)
             { status: 400 }
         );
     }
+
+
 
     const user = await db
     .select()
