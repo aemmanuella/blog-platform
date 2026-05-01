@@ -38,6 +38,9 @@ To ensure everyone stays in sync with what exactly we are building, we maintain 
 Whenever we have a meeting, discuss new features, or change any functionality, the Documentation team will update this file. Always refer to the PRD if you are unsure about how a feature should work or what the current requirements are.
 
 ---
+## UI/UX DESIGN 
+
+https://www.figma.com/site/1jcp8y4HmeJlmhEPXktSAc/Untitled?node-id=1-77&t=Ee3m4Sd4V8VqA8iu-0
 
 ## Environment Variables (.env)
 
