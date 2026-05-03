@@ -1,72 +1,55 @@
+import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request)
-{
-    // all logic here
-    let body;
+// Define the schema once — validation + types in one place
+const LoginSchema = z.object({
+  email: z.string().email({ message: "Invalid email address" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+});
 
-    try {
-        body = await req.json()
-    }
-    catch {
-        return Response.json(
-            { error: "Invalid or missing JSON body" },
-            { status: 400 }
-        );
-    }
+// Infer the TypeScript type for free
+type LoginBody = z.infer<typeof LoginSchema>;
 
+export async function POST(req: Request) {
+  let body: unknown;
 
-    const {email, password} = body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-    if (!email || !password)
-    {
-        return Response.json(
-            { error: "Email and password are required" },
-            { status: 400 }
-        );
-    }
+  // Replace all manual field checks with a single safeParse call
+  const result = LoginSchema.safeParse(body);
 
-
-
-    const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
-    if(user.length === 0) {
-        return Response.json(
-            {error: "Invalid credentials"},
-            {status: 401}
-        );
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-        password,
-        user[0].passwordHash
+  if (!result.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: result.error.flatten().fieldErrors },
+      { status: 400 }
     );
+  }
 
-    if(!isPasswordValid) 
-    {
-        return Response.json(
-            {error: "Invalid credentials"},
-            {status: 401}
-        );
-    }
+  // result.data is now fully typed as LoginBody — no casting needed!
+  const { email, password }: LoginBody = result.data;
 
-    return Response.json(
-        {
-            message: "Login successful",
-            user: {
-                id: user[0].id,
-                name: user[0].name,
-                email: user[0].email
-            }
-        },
-        { status: 200 }
-    );
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+
+  if (!user) {
+    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+  if (!isPasswordValid) {
+    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    message: "Login successful",
+    user: { id: user.id, name: user.name, email: user.email },
+  });
 }
-
